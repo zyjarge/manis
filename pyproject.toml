@@ -1,0 +1,11 @@
+[project]
+name = "manis"
+version = "0.1.0"
+description = "Cross-platform SSH Tunnel Manager"
+requires-python = ">=3.10"
+dependencies = [
+    "pywebview>=4.0",
+]
+
+[project.scripts]
+manis = "manis.__main__:main"

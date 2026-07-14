@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>manis - SSH Tunnel Manager</title>
+<style>
+  :root {
+    --bg: #1a1b1e;
+    --surface: #25262b;
+    --surface-2: #2c2e33;
+    --border: #373a40;
+    --text: #c1c2c5;
+    --text-dim: #909296;
+    --primary: #4c6ef5;
+    --primary-hover: #3b5bdb;
+    --green: #51cf66;
+    --red: #ff6b6b;
+    --yellow: #fcc419;
+    --radius: 8px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .header h1 span { color: var(--primary); }
+  .header-actions { display: flex; gap: 8px; }
+  .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-secondary { background: var(--surface-2); color: var(--text); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-small { padding: 4px 10px; font-size: 12px; }
+  .btn-icon { padding: 6px 8px; }
+
+  .tunnel-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color 0.15s;
+  }
+  .tunnel-card:hover { border-color: var(--primary); }
+  .tunnel-card.running { border-left: 3px solid var(--green); }
+  .tunnel-card.stopped { border-left: 3px solid var(--text-dim); }
+  .tunnel-info { flex: 1; }
+  .tunnel-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .tunnel-meta {
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .tunnel-meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+  .status-dot.running { background: var(--green); }
+  .status-dot.stopped { background: var(--text-dim); }
+  .tunnel-actions { display: flex; gap: 6px; align-items: center; }
+  .forwards {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    background: var(--bg);
+    padding: 6px 10px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    width: 520px;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal h2 {
+    font-size: 18px;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+  .form-group {
+    margin-bottom: 14px;
+  }
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 14px;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+  .form-row {
+    display: flex;
+    gap: 10px;
+  }
+  .form-row .form-group { flex: 1; }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+  .forward-entry {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 8px;
+    background: var(--bg);
+    border-radius: 6px;
+  }
+  .forward-entry input { flex: 1; }
+  .forward-entry .btn-remove {
+    background: none;
+    border: none;
+    color: var(--red);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 15px; margin-bottom: 16px; }
+
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 20px;
+    z-index: 200;
+    display: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    font-size: 13px;
+  }
+  .toast.show { display: block; animation: slideIn 0.3s ease; }
+  @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .ssh-host-list {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  .ssh-host-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    transition: background 0.15s;
+  }
+  .ssh-host-item:hover { background: var(--surface-2); }
+  .ssh-host-item .host-name { color: #fff; font-weight: 500; }
+  .ssh-host-item .host-detail { color: var(--text-dim); font-size: 12px; }
+
+  .section-title {
+    font-size: 13px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 20px 0 10px;
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>manis<span>.</span></h1>
+  <div class="header-actions">
+    <button class="btn btn-secondary" onclick="refreshList()">🔄 刷新</button>
+    <button class="btn btn-secondary" onclick="showImportSSH()">📋 从 SSH Config 导入</button>
+    <button class="btn btn-primary" onclick="showAddDialog()">➕ 新建隧道</button>
+  </div>
+</div>
+
+<div id="tunnel-list"></div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="tunnelModal">
+  <div class="modal">
+    <h2 id="modalTitle">新建隧道</h2>
+    <div class="form-group">
+      <label>名称</label>
+      <input id="t-name" placeholder="例如: Oracle">
+    </div>
+    <div class="form-group">
+      <label>跳板机 (SSH Host)</label>
+      <input id="t-host" placeholder="例如: work">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>SSH 用户 (可选)</label>
+        <input id="t-user" placeholder="root">
+      </div>
+      <div class="form-group">
+        <label>SSH 端口 (可选)</label>
+        <input id="t-port" placeholder="22" type="number">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>密钥文件 (可选)</label>
+      <input id="t-identity" placeholder="~/.ssh/id_rsa">
+    </div>
+    <div class="form-group">
+      <label>额外 SSH 参数 (可选)</label>
+      <input id="t-extra" placeholder="-o StrictHostKeyChecking=no">
+    </div>
+    <div class="section-title">端口转发规则</div>
+    <div id="forward-list"></div>
+    <button class="btn btn-secondary btn-small" onclick="addForwardRule()">➕ 添加转发规则</button>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('tunnelModal')">取消</button>
+      <button class="btn btn-primary" id="modalSaveBtn" onclick="saveTunnel()">创建</button>
+    </div>
+    <input type="hidden" id="edit-name" value="">
+  </div>
+</div>
+
+<!-- SSH Config Import Modal -->
+<div class="modal-overlay" id="sshModal">
+  <div class="modal">
+    <h2>从 SSH Config 导入</h2>
+    <div class="form-group">
+      <input id="ssh-search" placeholder="搜索 Host..." oninput="filterSSHHosts()">
+    </div>
+    <div class="ssh-host-list" id="ssh-host-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('sshModal')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const api = () => window.pywebview && window.pywebview.api ? window.pywebview.api : null;
+let currentTunnels = [];
+let currentSSHHosts = [];
+
+function getApi() {
+  const a = api();
+  if (!a) console.error('pywebview.api not ready');
+  return a;
+}
+
+async function refreshList() {
+  const a = getApi();
+  if (!a) return;
+  currentTunnels = await a.list_tunnels();
+  renderList();
+}
+
+function renderList() {
+  const container = document.getElementById('tunnel-list');
+  if (currentTunnels.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">🔒</div>
+        <p>还没有配置任何隧道</p>
+        <button class="btn btn-primary" onclick="showAddDialog()">➕ 新建隧道</button>
+      </div>`;
+    return;
+  }
+  container.innerHTML = currentTunnels.map(t => {
+    const statusClass = t.running ? 'running' : 'stopped';
+    const statusText = t.running ? '运行中' : '已停止';
+    const forwardsHtml = t.forwards.map(f =>
+      `${f.local_port} → ${f.remote_host}:${f.remote_port}`
+    ).join(' | ');
+    const safeName = t.name.replace(/'/g, "\\'");
+    return `
+    <div class="tunnel-card ${statusClass}" data-name="${t.name}">
+      <div class="tunnel-info">
+        <div class="tunnel-name">
+          <span class="status-dot ${statusClass}"></span>${t.name}
+        </div>
+        <div class="tunnel-meta">
+          <span>🖥️ ${t.host}${t.user ? ` (${t.user})` : ''}${t.port ? `:${t.port}` : ''}</span>
+          <span>🔁 ${t.tunnel_type}</span>
+          <span>${statusText}</span>
+        </div>
+        <div class="forwards">${forwardsHtml}</div>
+      </div>
+      <div class="tunnel-actions">
+        <button class="btn btn-small action-toggle ${t.running ? 'btn-danger' : 'btn-primary'}">
+          ${t.running ? '⏹️ 停止' : '▶️ 启动'}
+        </button>
+        <button class="btn btn-small btn-secondary action-edit">✏️</button>
+        <button class="btn btn-small btn-secondary action-delete">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Event delegation for tunnel actions
+document.addEventListener('click', function(e) {
+  const card = e.target.closest('.tunnel-card');
+  if (!card) return;
+  const name = card.dataset.name;
+
+  if (e.target.classList.contains('action-toggle')) {
+    toggleTunnel(name);
+  } else if (e.target.classList.contains('action-edit')) {
+    editTunnel(name);
+  } else if (e.target.classList.contains('action-delete')) {
+    deleteTunnel(name);
+  }
+});
+
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast show';
+  setTimeout(() => { toast.className = 'toast'; }, 3000);
+}
+
+async function toggleTunnel(name) {
+  const a = getApi(); if (!a) return;
+  const result = await a.toggle_tunnel(name);
+  showToast(result);
+  refreshList();
+}
+
+async function deleteTunnel(name) {
+  if (!confirm(`确定删除隧道 "${name}" ?`)) return;
+  const a = getApi(); if (!a) return;
+  const result = await a.delete_tunnel(name);
+  showToast(result);
+  refreshList();
+}
+
+async function showAddDialog() {
+  console.log('showAddDialog called');
+  try {
+    document.getElementById('modalTitle').textContent = '新建隧道';
+    document.getElementById('modalSaveBtn').textContent = '创建';
+    document.getElementById('edit-name').value = '';
+    document.getElementById('t-name').value = '';
+    document.getElementById('t-host').value = '';
+    document.getElementById('t-user').value = '';
+    document.getElementById('t-port').value = '';
+    document.getElementById('t-identity').value = '';
+    document.getElementById('t-extra').value = '';
+    const fwList = document.getElementById('forward-list');
+    if (!fwList) { console.error('forward-list not found'); return; }
+    fwList.innerHTML = '';
+    addForwardRule();
+    const modal = document.getElementById('tunnelModal');
+    if (!modal) { console.error('tunnelModal not found'); return; }
+    modal.classList.add('active');
+    console.log('Modal shown');
+  } catch(e) {
+    console.error('showAddDialog error:', e);
+  }
+}
+
+function addForwardRule(lp='', rh='', rp='') {
+  const list = document.getElementById('forward-list');
+  const idx = list.children.length;
+  const div = document.createElement('div');
+  div.className = 'forward-entry';
+  div.id = `fw-${idx}`;
+  div.innerHTML = `
+    <input type="number" class="fw-lp" placeholder="本地端口" value="${lp}" min="1" max="65535">
+    <input class="fw-rh" placeholder="目标 IP" value="${rh}">
+    <input type="number" class="fw-rp" placeholder="目标端口" value="${rp}" min="1" max="65535">
+    <button class="btn-remove" onclick="this.parentElement.remove()">×</button>
+  `;
+  list.appendChild(div);
+}
+
+function getForwardRules() {
+  const rules = [];
+  document.querySelectorAll('.forward-entry').forEach(el => {
+    const lp = parseInt(el.querySelector('.fw-lp').value);
+    const rh = el.querySelector('.fw-rh').value.trim();
+    const rp = parseInt(el.querySelector('.fw-rp').value);
+    if (lp && rh && rp) rules.push({ local_port: lp, remote_host: rh, remote_port: rp });
+  });
+  return rules;
+}
+
+async function saveTunnel() {
+  const name = document.getElementById('t-name').value.trim();
+  const host = document.getElementById('t-host').value.trim();
+  const user = document.getElementById('t-user').value.trim() || null;
+  const port = parseInt(document.getElementById('t-port').value) || null;
+  const identity = document.getElementById('t-identity').value.trim() || null;
+  const extra = document.getElementById('t-extra').value.trim() || '';
+  const forwards = getForwardRules();
+  const editName = document.getElementById('edit-name').value;
+
+  if (!name) { showToast('请输入隧道名称'); return; }
+  if (!host) { showToast('请输入跳板机'); return; }
+  if (forwards.length === 0) { showToast('至少添加一个转发规则'); return; }
+
+  const tunnel = { name, host, user, port, identity_file: identity, extra_args: extra, forwards, tunnel_type: 'local' };
+
+  if (editName) {
+    tunnel.old_name = editName;
+  }
+
+  const a = getApi(); if (!a) return;
+  const result = await a.save_tunnel(tunnel);
+  showToast(result);
+  closeModal('tunnelModal');
+  refreshList();
+}
+
+async function editTunnel(name) {
+  const t = currentTunnels.find(t => t.name === name);
+  if (!t) return;
+  document.getElementById('modalTitle').textContent = '编辑隧道';
+  document.getElementById('modalSaveBtn').textContent = '保存';
+  document.getElementById('edit-name').value = name;
+  document.getElementById('t-name').value = t.name;
+  document.getElementById('t-host').value = t.host;
+  document.getElementById('t-user').value = t.user || '';
+  document.getElementById('t-port').value = t.port || '';
+  document.getElementById('t-identity').value = t.identity_file || '';
+  document.getElementById('t-extra').value = t.extra_args || '';
+  document.getElementById('forward-list').innerHTML = '';
+  if (t.forwards && t.forwards.length > 0) {
+    t.forwards.forEach(f => addForwardRule(f.local_port, f.remote_host, f.remote_port));
+  } else {
+    addForwardRule();
+  }
+  document.getElementById('tunnelModal').classList.add('active');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+async function showImportSSH() {
+  const a = getApi(); if (!a) return;
+  currentSSHHosts = await a.get_ssh_hosts();
+  const list = document.getElementById('ssh-host-list');
+  if (currentSSHHosts.length === 0) {
+    list.innerHTML = '<div class="empty-state"><p>~/.ssh/config 中没有找到 Host</p></div>';
+  } else {
+    renderSSHHosts(currentSSHHosts);
+  }
+  document.getElementById('ssh-search').value = '';
+  document.getElementById('sshModal').classList.add('active');
+}
+
+function renderSSHHosts(hosts) {
+  const list = document.getElementById('ssh-host-list');
+  list.innerHTML = hosts.map(h => `
+    <div class="ssh-host-item" onclick="createFromSSHHost('${h.host}')">
+      <span class="host-name">${h.host}</span>
+      <span class="host-detail">${h.display_name || ''}</span>
+    </div>
+  `).join('');
+}
+
+function filterSSHHosts() {
+  const q = document.getElementById('ssh-search').value.toLowerCase();
+  const filtered = currentSSHHosts.filter(h =>
+    h.host.toLowerCase().includes(q) || (h.display_name || '').toLowerCase().includes(q)
+  );
+  renderSSHHosts(filtered);
+}
+
+async function createFromSSHHost(hostName) {
+  const h = currentSSHHosts.find(x => x.host === hostName);
+  if (!h) return;
+  closeModal('sshModal');
+  document.getElementById('modalTitle').textContent = `从 "${hostName}" 创建隧道`;
+  document.getElementById('modalSaveBtn').textContent = '创建';
+  document.getElementById('edit-name').value = '';
+  document.getElementById('t-name').value = '';
+  document.getElementById('t-host').value = h.host;
+  document.getElementById('t-user').value = h.user || '';
+  document.getElementById('t-port').value = h.port || '';
+  document.getElementById('t-identity').value = h.identity_file || '';
+  document.getElementById('t-extra').value = '';
+  document.getElementById('forward-list').innerHTML = '';
+  addForwardRule();
+  document.getElementById('tunnelModal').classList.add('active');
+}
+
+// Auto refresh every 5s
+setInterval(refreshList, 5000);
+</script>
+</body>
+</html>
