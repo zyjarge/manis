@@ -264,6 +264,10 @@ UV_PYTHON=/usr/local/Cellar/python@3.13/3.13.11_1/bin/python3.13 \
 open dist/manis.app
 ```
 
+> Tip: prefer the committed `manis.spec` + `./scripts/build.sh` for a
+> one-line reproducible build. See [PACKAGING.md](PACKAGING.md) for
+> the long version and DMG/signing/notarization instructions.
+
 ### Module overview
 
 | Module                  | Purpose                                            |

@@ -11,7 +11,7 @@ wheels/
 
 # macOS / PyInstaller
 .DS_Store
-*.spec
+# manis.spec is committed on purpose — single source of truth for the .app build
 
 # Hermes / agent notes
 entities.json

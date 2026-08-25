@@ -259,6 +259,8 @@ UV_PYTHON=/usr/local/Cellar/python@3.13/3.13.11_1/bin/python3.13 \
 open dist/manis.app
 ```
 
+> 提示：推荐用提交进仓库的 `manis.spec` + `./scripts/build.sh` 一键打包，结果更可复现。详见 [PACKAGING.md](PACKAGING.md)（含 DMG、签名、公证说明）。
+
 ### 模块概览
 
 | 模块                  | 作用                                          |
