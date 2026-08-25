@@ -33,10 +33,11 @@ jobs:
           - os: macos-latest
             label: macOS
             script: build-mac.sh
-            artifact_glob: 'manis-*-macOS-x86_64.*'
-            # macos-latest runs on Apple Silicon (arm64) runners. We build
-            # x86_64 because the user is on Intel; swap target_arch in
-            # manis.spec to 'arm64' (or 'universal2') if shipping for M-series.
+            # macOS-latest is now arm64; the build-mac.sh script writes
+            # the host arch into the artifact name (so we glob to cover
+            # both x86_64 and arm64 — Intel Mac runners would give x86_64).
+            artifact_glob: 'manis-*-macOS-*.dmg'
+            artifact_fallback_glob: 'manis-*-macOS-*.zip'
           - os: windows-latest
             label: Windows
             script: build-windows.sh
@@ -82,9 +83,14 @@ jobs:
             libsoup-3.0-0
 
       # Windows and Linux runners don't ship `python`/`python3` by default.
-      # setup-uv installs Python 3.13 (via python-version above) but doesn't
-      # add it to PATH for subsequent steps — point the scripts at it explicitly.
-      - name: Resolve Python path for non-macOS runners
+      # setup-uv installs Python 3.13 (via python-version above) into uv's
+      # cache but `uv python find` only resolves interpreters registered in
+      # the default install location. Install + find explicitly.
+      - name: Install Python 3.13 (Windows/Linux)
+        if: matrix.os != 'macos-latest'
+        run: uv python install 3.13
+
+      - name: Resolve Python path (Windows/Linux)
         if: matrix.os != 'macos-latest'
         shell: bash
         run: echo "PYTHON_BIN=$(uv python find 3.13)" >> "$GITHUB_ENV"

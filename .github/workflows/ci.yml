@@ -58,9 +58,14 @@ jobs:
             libsoup-3.0-0
 
       # Windows and Linux runners don't ship `python`/`python3` by default.
-      # setup-uv installs Python 3.13 (via python-version above) but doesn't
-      # add it to PATH for subsequent steps — point the scripts at it explicitly.
-      - name: Resolve Python path for non-macOS runners
+      # setup-uv's python-version installs into uv's cache but `uv python find`
+      # only locates interpreters in the default install location. Install
+      # explicitly so find() returns the path.
+      - name: Install Python 3.13 (Windows/Linux)
+        if: matrix.os != 'macos-latest'
+        run: uv python install 3.13
+
+      - name: Resolve Python path (Windows/Linux)
         if: matrix.os != 'macos-latest'
         shell: bash
         run: echo "PYTHON_BIN=$(uv python find 3.13)" >> "$GITHUB_ENV"

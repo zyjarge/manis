@@ -7,7 +7,7 @@
 #
 # Required env vars from caller:
 #   PYTHON_BIN    absolute path to a working Python interpreter
-#   BUILD_LABEL   e.g. "macOS-x86_64" — used for logging only
+#   BUILD_LABEL   e.g. "macOS" — used for logging only
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,9 +17,12 @@ cd "$ROOT_DIR"
 : "${PYTHON_BIN:?PYTHON_BIN must be set}"
 : "${BUILD_LABEL:?BUILD_LABEL must be set}"
 
-if [[ ! -x "$PYTHON_BIN" ]]; then
-    echo "❌  Python interpreter not found: $PYTHON_BIN" >&2
-    exit 1
+if [[ ! -e "$PYTHON_BIN" ]]; then
+    # On Windows the binary path ends in '.exe' so [[ -x ]] misses it
+    if [[ ! -e "${PYTHON_BIN}.exe" ]]; then
+        echo "❌  Python interpreter not found: $PYTHON_BIN" >&2
+        exit 1
+    fi
 fi
 
 if ! command -v uv >/dev/null 2>&1; then
@@ -33,10 +36,16 @@ UV_PYTHON="$PYTHON_BIN" uv venv --python "$PYTHON_BIN"
 
 echo "▶ [$BUILD_LABEL] Installing dependencies"
 UV_PYTHON="$PYTHON_BIN" uv sync
-UV_PYTHON="$PYTHON_BIN" uv pip install --python .venv/bin/python pyinstaller
+
+# Install pyinstaller into the venv. Use `uv pip install` (not `uv add`)
+# because pyinstaller is a build-only tool, not a runtime dependency.
+# `--python .venv` is portable across macOS/Linux (.venv/bin/python)
+# and Windows (.venv/Scripts/python.exe) — uv resolves it.
+UV_PYTHON="$PYTHON_BIN" uv pip install --python .venv pyinstaller
 
 echo "▶ [$BUILD_LABEL] Cleaning build/ and dist/"
 rm -rf build dist
 
 echo "▶ [$BUILD_LABEL] Running PyInstaller"
-UV_PYTHON="$PYTHON_BIN" .venv/bin/pyinstaller --noconfirm manis.spec
+# `uv run` resolves the right python.exe on Windows automatically.
+UV_PYTHON="$PYTHON_BIN" uv run --python .venv pyinstaller --noconfirm manis.spec
