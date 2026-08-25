@@ -32,15 +32,18 @@ jobs:
         include:
           - os: macos-latest
             label: macOS
+            script: build-mac.sh
             artifact_glob: 'manis-*-macOS-x86_64.*'
             # macos-latest runs on Apple Silicon (arm64) runners. We build
-            # x86_64 because the user is on Intel; swap to arm64 (or
-            # universal2) if shipping for M-series Macs.
+            # x86_64 because the user is on Intel; swap target_arch in
+            # manis.spec to 'arm64' (or 'universal2') if shipping for M-series.
           - os: windows-latest
             label: Windows
+            script: build-windows.sh
             artifact_glob: 'manis-*-windows.zip'
           - os: ubuntu-22.04
             label: Linux
+            script: build-linux.sh
             artifact_glob: 'manis-*-linux-x86_64.tar.gz'
 
     steps:
@@ -72,11 +75,15 @@ jobs:
             libsoup-3.0-0
 
       - name: Build + package
+        # Use bash explicitly — Windows defaults to PowerShell, which
+        # trips over bash-isms in our scripts and the `ls -lh` below.
+        shell: bash
         run: |
-          chmod +x scripts/build-${{ matrix.label }}.sh
-          ./scripts/build-${{ matrix.label }}.sh
+          chmod +x scripts/${{ matrix.script }}
+          ./scripts/${{ matrix.script }}
 
       - name: List dist/
+        shell: bash
         run: ls -lh dist/
 
       - name: Upload artifact to release

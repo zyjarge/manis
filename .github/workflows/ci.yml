@@ -18,10 +18,13 @@ jobs:
         include:
           - os: macos-latest
             label: macOS
+            script: build-mac.sh
           - os: windows-latest
             label: Windows
+            script: build-windows.sh
           - os: ubuntu-22.04
             label: Linux
+            script: build-linux.sh
 
     steps:
       - uses: actions/checkout@v4
@@ -47,12 +50,14 @@ jobs:
         run: uv python install 3.13
 
       - name: Build (no packaging)
+        shell: bash
         run: |
-          chmod +x scripts/build-${{ matrix.label }}.sh
-          # Pass through uv-managed Python; macOS uses the system framework build.
+          chmod +x scripts/${{ matrix.script }}
+          # macOS uses the system framework build of Python 3.13 from
+          # Homebrew; other runners use uv-managed Python 3.13.
           if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
             PYTHON_BIN="$(brew --prefix python@3.13)/bin/python3.13" \
-              ./scripts/build-${{ matrix.label }}.sh
+              ./scripts/${{ matrix.script }}
           else
-            ./scripts/build-${{ matrix.label }}.sh
+            ./scripts/${{ matrix.script }}
           fi
