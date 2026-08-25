@@ -1,0 +1,58 @@
+name: ci
+
+# Fast sanity check — runs on every PR + push to main, builds the
+# project for the host platform only (no packaging, no upload). If
+# this fails, the tag-triggered release workflow won't work either.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  smoke:
+    name: Smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: macOS
+          - os: windows-latest
+            label: Windows
+          - os: ubuntu-22.04
+            label: Linux
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: latest
+
+      - name: Install GTK WebKit runtime libs (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-0 \
+            libgtk-3-0 \
+            libnotify4 \
+            libsecret-1-0 \
+            libsoup-3.0-0
+
+      - name: Install Python (skip on macOS — uses system framework Python)
+        if: matrix.os != 'macos-latest'
+        run: uv python install 3.13
+
+      - name: Build (no packaging)
+        run: |
+          chmod +x scripts/build-${{ matrix.label }}.sh
+          # Pass through uv-managed Python; macOS uses the system framework build.
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            PYTHON_BIN="$(brew --prefix python@3.13)/bin/python3.13" \
+              ./scripts/build-${{ matrix.label }}.sh
+          else
+            ./scripts/build-${{ matrix.label }}.sh
+          fi

@@ -53,6 +53,10 @@ open dist/manis.app
 打出来的 `.app` 完全自包含，可以直接拖进 `/Applications/`。
 构建 `.dmg` 安装包、代码签名、公证等细节见 [PACKAGING.md](PACKAGING.md)。
 
+### Releases
+
+每次推 `v*` tag 时，CI 会自动在 macOS / Windows / Linux 三平台并行构建并把产物上传到 GitHub Release。详见 [PACKAGING.md §八](PACKAGING.md#八发布到-github-releases)。
+
 ### 仅安装 CLI
 
 ```bash

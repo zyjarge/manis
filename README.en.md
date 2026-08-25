@@ -55,6 +55,10 @@ The standalone `.app` is fully self-contained and can be dragged into
 `/Applications/`. See [PACKAGING.md](PACKAGING.md) for details on
 building `.dmg` installers, code signing, and notarization.
 
+### Releases
+
+Every push of a `v*` tag triggers a CI matrix build for macOS / Windows / Linux and uploads the artifacts to the GitHub Release. See [PACKAGING.md §8](PACKAGING.md#eight-publishing-to-github-releases) for the workflow.
+
 ### CLI-only install
 
 ```bash

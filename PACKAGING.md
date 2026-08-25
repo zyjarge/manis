@@ -166,10 +166,76 @@ uname -m
 | 文件 | 状态 | 用途 |
 |---|---|---|
 | `manis.spec` | ✅ 提交进仓库 | PyInstaller 构建配置 |
-| `scripts/build.sh` | ✅ 提交进仓库 | 一键打包 + 冒烟测试 |
+| `scripts/build.sh` | ✅ 提交进仓库 | 开发者一键打包 + 冒烟测试 |
+| `scripts/build-common.sh` | ✅ 提交进仓库 | 三平台共享的 venv/安装逻辑 |
+| `scripts/build-mac.sh` | ✅ 提交进仓库 | macOS 打包 + .dmg/.zip |
+| `scripts/build-windows.sh` | ✅ 提交进仓库 | Windows 打包 + .zip |
+| `scripts/build-linux.sh` | ✅ 提交进仓库 | Linux 打包 + .tar.gz |
+| `.github/workflows/ci.yml` | ✅ 提交进仓库 | PR/每次 push 跑 CI |
+| `.github/workflows/release.yml` | ✅ 提交进仓库 | tag 触发，三平台并发构建并上传到 Release |
 | `setup.py` | ⚠️ 已弃用 | 保留作历史参考，**不要再跑** |
 | `manis/app.py` | ✅ 已修改 | 自动适配打包后的资源路径 |
 | `main.py` | ✅ 已修改 | 打包后的应用入口 |
+
+---
+
+## 八、发布到 GitHub Releases
+
+CI 已配好，三平台并行构建产物并自动 attach 到 release。
+
+### 1. 切版本号
+
+`pyproject.toml` 里的 `version` 字段是唯一权威版本号。改完提交：
+
+```bash
+# 编辑 pyproject.toml，把 version = "0.1.0" 改成 "0.2.0"
+git add pyproject.toml
+git commit -m "Bump version to 0.2.0"
+git push
+```
+
+### 2. 打 tag 触发 release
+
+```bash
+git tag v0.2.0
+git push --tags
+```
+
+`release.yml` 会：
+- 在 macOS / Windows / Ubuntu 三个 runner 上并行构建
+- 把每个平台的产物 attach 到 `v0.2.0` release
+- 标记 release 为 latest
+
+### 3. 编辑 release notes
+
+推完 tag 等 CI 跑完（5–10 分钟）后：
+
+```bash
+gh release edit v0.2.0 --notes "$(cat <<'EOF'
+## What's new
+
+- ...
+- ...
+
+## Downloads
+
+- **macOS**: `manis-X.Y.Z-macOS-x86_64.dmg`
+- **Windows**: `manis-X.Y.Z-windows.zip`
+- **Linux**: `manis-X.Y.Z-linux-x86_64.tar.gz`
+EOF
+)"
+```
+
+或者直接去 GitHub 网页上编辑（点 release 页的 ✏️）。
+
+### 4. 本地试发布（不传 tag）
+
+只跑打包脚本，不触发 CI：
+
+```bash
+./scripts/build-mac.sh     # 生成本地 .dmg/.zip（CI 用的同一份脚本）
+ls dist/*.dmg dist/*.zip
+```
 
 ---
 

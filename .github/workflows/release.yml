@@ -1,0 +1,93 @@
+name: release
+
+# Triggered when a tag like `v0.1.0` is pushed. Builds manis for the
+# three supported platforms in parallel, attaches the artifacts to a
+# GitHub Release named after the tag.
+#
+# Tag-only trigger — every push to main is unaffected. To cut a release:
+#
+#     git tag v0.1.0
+#     git push --tags
+#
+# The job will:
+#   1. Build a release draft as soon as the first matrix leg finishes.
+#   2. Upload each platform's artifact to that release.
+#   3. Mark the release as "latest" once all legs have uploaded.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # needed to create / upload release assets
+
+jobs:
+  build:
+    name: Build (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false          # one platform failing shouldn't cancel the others
+      matrix:
+        include:
+          - os: macos-latest
+            label: macOS
+            artifact_glob: 'manis-*-macOS-x86_64.*'
+            # macos-latest runs on Apple Silicon (arm64) runners. We build
+            # x86_64 because the user is on Intel; swap to arm64 (or
+            # universal2) if shipping for M-series Macs.
+          - os: windows-latest
+            label: Windows
+            artifact_glob: 'manis-*-windows.zip'
+          - os: ubuntu-22.04
+            label: Linux
+            artifact_glob: 'manis-*-linux-x86_64.tar.gz'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: latest
+
+      - name: Install create-dmg (macOS only — produces nicer .dmg than zip)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install create-dmg
+
+      # pywebview on Linux needs GTK WebKit — install the libs so the bundle
+      # can find them at runtime.
+      - name: Install GTK WebKit runtime libs (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-0 \
+            libgtk-3-0 \
+            libnotify4 \
+            libsecret-1-0 \
+            libsoup-3.0-0
+
+      - name: Build + package
+        run: |
+          chmod +x scripts/build-${{ matrix.label }}.sh
+          ./scripts/build-${{ matrix.label }}.sh
+
+      - name: List dist/
+        run: ls -lh dist/
+
+      - name: Upload artifact to release
+        uses: softprops/action-gh-release@v2
+        with:
+          # softprops figures out the release from the tag that triggered
+          # the workflow — no need to pass tag_name explicitly.
+          files: dist/${{ matrix.artifact_glob }}
+          fail_on_unmatched_files: true
+          # Each parallel job uploads independently; softprops will mark
+          # the release as "latest" once any upload succeeds, which is
+          # fine for our use case (the release is tagged + published only
+          # when this workflow runs, so "latest" is unambiguous).
+          make_latest: true
