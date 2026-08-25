@@ -49,8 +49,12 @@ exe = EXE(
     console=False,           # no Terminal.app window when launched from Finder
     disable_windowed_traceback=False,
     argv_emulation=False,
-    target_arch='x86_64',    # Intel Mac; switch to 'arm64' on Apple Silicon,
-                             # or None for the host arch
+    target_arch=None,        # build for the runner's native arch:
+                             #   - x86_64 on Intel Mac runners
+                             #   - arm64   on Apple Silicon runners
+                             # Set to 'x86_64' or 'arm64' to force, or
+                             # 'universal2' for a fat binary (requires
+                             # a universal2 Python install).
     codesign_identity=None,  # set to 'Developer ID Application: ...' for distribution
     entitlements_file=None,
 )
