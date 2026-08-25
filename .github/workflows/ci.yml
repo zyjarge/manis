@@ -33,7 +33,19 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           version: latest
+          python-version: '3.13'
 
+      # macOS needs a framework build of Python (uv's default is non-framework,
+      # which makes the .app crash with "A Python runtime could not be located").
+      # brew provides python@3.13 as a framework build.
+      - name: Install framework Python + create-dmg (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install create-dmg python@3.13
+          echo "PYTHON_BIN=$(brew --prefix python@3.13)/bin/python3.13" >> "$GITHUB_ENV"
+
+      # pywebview on Linux needs GTK WebKit — install the runtime libs so the
+      # bundled binary can find them at launch time.
       - name: Install GTK WebKit runtime libs (Linux)
         if: matrix.os == 'ubuntu-22.04'
         run: |
@@ -45,19 +57,6 @@ jobs:
             libsecret-1-0 \
             libsoup-3.0-0
 
-      - name: Install Python (skip on macOS — uses system framework Python)
-        if: matrix.os != 'macos-latest'
-        run: uv python install 3.13
-
       - name: Build (no packaging)
         shell: bash
-        run: |
-          chmod +x scripts/${{ matrix.script }}
-          # macOS uses the system framework build of Python 3.13 from
-          # Homebrew; other runners use uv-managed Python 3.13.
-          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            PYTHON_BIN="$(brew --prefix python@3.13)/bin/python3.13" \
-              ./scripts/${{ matrix.script }}
-          else
-            ./scripts/${{ matrix.script }}
-          fi
+        run: ./scripts/${{ matrix.script }}

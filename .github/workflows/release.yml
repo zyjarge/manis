@@ -54,12 +54,19 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           version: latest
+          python-version: '3.13'
 
-      - name: Install create-dmg (macOS only — produces nicer .dmg than zip)
+      - name: Install create-dmg + framework Python (macOS)
+        # macOS needs a *framework* build of Python 3.13 — uv's default
+        # non-framework cpython produces an .app that crashes on first
+        # launch with "A Python runtime could not be located".
         if: matrix.os == 'macos-latest'
         run: |
           brew update
-          brew install create-dmg
+          brew install create-dmg python@3.13
+          # `brew --prefix python@3.13` is /opt/homebrew on arm64 runners,
+          # /usr/local on x86_64 runners — we just use whatever brew gives.
+          echo "PYTHON_BIN=$(brew --prefix python@3.13)/bin/python3.13" >> "$GITHUB_ENV"
 
       # pywebview on Linux needs GTK WebKit — install the libs so the bundle
       # can find them at runtime.
