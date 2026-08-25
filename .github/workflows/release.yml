@@ -55,7 +55,6 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           version: latest
-          python-version: '3.13'
 
       - name: Install create-dmg + framework Python (macOS)
         # macOS needs a *framework* build of Python 3.13 — uv's default
