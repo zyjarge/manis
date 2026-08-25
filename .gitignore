@@ -8,3 +8,10 @@ wheels/
 
 # Virtual environments
 .venv
+
+# macOS / PyInstaller
+.DS_Store
+*.spec
+
+# Hermes / agent notes
+entities.json

@@ -1,53 +1,59 @@
 # manis
 
-> Cross-platform SSH tunnel manager with a native web UI.
+> 跨平台 SSH 隧道管理器，原生网页界面。
 
-manis helps you manage SSH port-forwarding tunnels from your Mac menu
-bar (or any other platform with a desktop browser). Click once to
-open, click again to close — no more typing `ssh -L ...` in your
-terminal every time.
+manis 帮你从 Mac 菜单栏（或其他任何带桌面浏览器的系统）管理 SSH 端口转发隧道。
+点一下打开，再点一下关闭——再也不用每次都在终端里敲 `ssh -L ...` 了。
 
-![manis screenshot](manis/web/screenshot.png)
+![manis 截图](manis/web/screenshot.png)
 
----
-
-## ✨ Features
-
-- **One-click on/off** — menu bar / window buttons start and stop tunnels instantly
-- **Multiple tunnels, one place** — manage as many forwarding rules as you need
-- **SSH Config import** — read your `~/.ssh/config` Host entries with one click
-- **Persistent processes** — tunnels survive `manis` exit (PID files in `~/.manis/pids/`)
-- **CLI mode** — `manis start Oracle` works from your shell too
-- **Cross-platform** — runs on macOS, Linux, Windows (Python + pywebview)
-- **Intel-friendly** — pure Python, no Apple Silicon requirement
+[English version →](README.en.md)
 
 ---
 
-## 📦 Installation
+## ✨ 功能特性
 
-### From source (development)
+- **一键启停** — 菜单栏/窗口按钮即可瞬时开关隧道
+- **多隧道集中管理** — 想管多少条转发规则都行
+- **从 SSH Config 导入** — 一键读取 `~/.ssh/config` 里的 Host 条目
+- **进程持久化** — 关闭 manis 隧道依然存活（PID 文件存放在 `~/.manis/pids/`）
+- **命令行模式** — 在终端里 `manis start Oracle` 也能用
+- **跨平台** — macOS、Linux、Windows 都能跑（Python + pywebview）
+- **对 Intel 友好** — 纯 Python，不强求 Apple Silicon
+
+---
+
+## 📦 安装方式
+
+### 从源码运行（开发模式）
 
 ```bash
 git clone https://github.com/yourname/manis.git
 cd manis
 uv sync
-uv run python3 -m manis          # launch GUI
+uv run python3 -m manis          # 启动 GUI
 ```
 
-Requires Python 3.10+ and [uv](https://docs.astral.sh/uv/).
+需要 Python 3.10+ 和 [uv](https://docs.astral.sh/uv/)。
 
-### As a macOS .app (packaged)
+### 打包为 macOS .app（独立应用）
+
+`.app` 包用 **PyInstaller** 构建（py2app 已弃用——它与 Python 3.12+/setuptools 80+ 不兼容）。
 
 ```bash
-uv run python3 setup.py py2app
+# 构建 .app 包（必须用 framework 版的 Python 3.13）
+UV_PYTHON=/usr/local/Cellar/python@3.13/3.13.11_1/bin/python3.13 \
+  uv run --python .venv/bin/python pyinstaller \
+    --noconfirm --windowed --name manis \
+    --add-data "manis/web:manis/web" main.py
+
 open dist/manis.app
 ```
 
-The standalone `.app` is fully self-contained and can be dragged into
-`/Applications/`. See [PACKAGING.md](PACKAGING.md) for details on
-building `.dmg` installers, code signing, and notarization.
+打出来的 `.app` 完全自包含，可以直接拖进 `/Applications/`。
+构建 `.dmg` 安装包、代码签名、公证等细节见 [PACKAGING.md](PACKAGING.md)。
 
-### CLI-only install
+### 仅安装 CLI
 
 ```bash
 uv tool install git+https://github.com/yourname/manis.git
@@ -56,36 +62,36 @@ manis list
 
 ---
 
-## 🚀 Quick start
+## 🚀 快速上手
 
-### 1. Launch the GUI
+### 1. 启动 GUI
 
 ```bash
 uv run python3 -m manis
 ```
 
-A native window opens with your configured tunnels. From there you can:
+会弹出一个原生窗口，列出已配置的隧道。你可以：
 
-- **➕ New tunnel** — fill in name, jump host, port mappings
-- **📋 Import from SSH Config** — pick from your existing `~/.ssh/config`
-- **▶/⏹** — toggle each tunnel on/off
+- **➕ 新建隧道** — 填写名称、跳板机、端口映射
+- **📋 从 SSH Config 导入** — 从已有的 `~/.ssh/config` 里挑
+- **▶/⏹** — 单独启停每条隧道
 
-### 2. Add your first tunnel (CLI)
+### 2. 用 CLI 加第一条隧道
 
 ```bash
-manis add                          # adds a default Oracle tunnel
-manis list                         # verify
-manis start Oracle                 # open the tunnel
+manis add                          # 加一条默认的 Oracle 隧道
+manis list                         # 看看是否加成功
+manis start Oracle                 # 打开隧道
 ```
 
-### 3. Configure Oracle access
+### 3. 配置 Oracle 数据库访问
 
 ```bash
 manis add
-# Edit ~/.manis/tunnels.json:
+# 编辑 ~/.manis/tunnels.json:
 # {
 #   "name": "Oracle",
-#   "host": "work",                    # SSH jump host alias
+#   "host": "work",                    # SSH 跳板机别名
 #   "forwards": [{
 #     "local_port": 15210,
 #     "remote_host": "10.0.125.35",
@@ -94,30 +100,30 @@ manis add
 # }
 
 manis start Oracle
-# Connect via localhost:15210
+# 通过 localhost:15210 连
 sqlplus BIDWDB/BIDWDB@localhost:15210/ORAPDB19
 ```
 
 ---
 
-## 📋 CLI reference
+## 📋 命令行参考
 
 ```
-manis                Launch GUI window
-manis list           List all configured tunnels with status
-manis start <name>   Start a tunnel
-manis stop  <name>   Stop a tunnel
-manis stop-all       Stop all running tunnels
-manis --help         Show this help
+manis                启动 GUI 窗口
+manis list           列出所有隧道及其状态
+manis start <name>   启动指定隧道
+manis stop  <name>   停止指定隧道
+manis stop-all       停止所有运行中的隧道
+manis --help         显示帮助
 ```
 
 ---
 
-## ⚙️ Configuration
+## ⚙️ 配置说明
 
-### Tunnel definitions
+### 隧道定义
 
-Stored in `~/.manis/tunnels.json`:
+存放在 `~/.manis/tunnels.json`：
 
 ```json
 {
@@ -140,12 +146,12 @@ Stored in `~/.manis/tunnels.json`:
 }
 ```
 
-### Runtime state
+### 运行时状态
 
-Active tunnel PIDs are stored in `~/.manis/pids/<name>.pid`.
-Stale PIDs (process no longer running) are auto-cleaned on startup.
+活跃隧道的 PID 存放在 `~/.manis/pids/<name>.pid`。
+进程已不存在的过期 PID 会在启动时自动清理。
 
-### Multi-forward example
+### 多端口转发示例
 
 ```json
 {
@@ -160,56 +166,54 @@ Stale PIDs (process no longer running) are auto-cleaned on startup.
 }
 ```
 
-One click opens all three.
+点一下三个端口同时打开。
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ 架构
 
 ```
 manis/
-├── pyproject.toml             # uv/pip project config
-├── setup.py                   # py2app .app bundle config
-├── main.py                    # Bundled .app entry point
-├── PACKAGING.md               # Detailed packaging guide
+├── pyproject.toml             # uv/pip 项目配置
+├── setup.py                   # py2app 配置（已弃用，见 PACKAGING.md）
+├── main.py                    # 打包后 .app 的入口
+├── PACKAGING.md               # 详细打包文档
 ├── manis/
 │   ├── __init__.py
-│   ├── __main__.py            # CLI entry (manis <command>)
-│   ├── app.py                 # pywebview window + API bridge
-│   ├── models.py              # TunnelConfig, ForwardRule, SSHHost
-│   ├── config_store.py        # JSON persistence
-│   ├── ssh_config_parser.py   # ~/.ssh/config reader
-│   ├── tunnel_manager.py      # SSH subprocess lifecycle
+│   ├── __main__.py            # CLI 入口（manis <command>）
+│   ├── app.py                 # pywebview 窗口 + API 桥接
+│   ├── models.py              # TunnelConfig、ForwardRule、SSHHost
+│   ├── config_store.py        # JSON 持久化
+│   ├── ssh_config_parser.py   # ~/.ssh/config 解析器
+│   ├── tunnel_manager.py      # SSH 子进程生命周期管理
 │   └── web/
-│       └── index.html         # UI (vanilla HTML/CSS/JS)
+│       └── index.html         # 界面（纯 HTML/CSS/JS，无构建步骤）
 ```
 
-### How the SSH tunnel actually works
+### SSH 隧道实际工作原理
 
 ```
 ┌─────────┐         ┌─────────────┐         ┌──────────────┐
-│   App   │ ──SSH──>│ work (jump) │ ──TCP──>│ Oracle 1521  │
-│ :15210  │  tunnel │ 10.0.125.43 │         │ 10.0.125.35  │
+│   App   │ ──SSH──>│ work (跳板) │ ──TCP──>│ Oracle 1521  │
+│ :15210  │  隧道   │ 10.0.125.43 │         │ 10.0.125.35  │
 └─────────┘         └─────────────┘         └──────────────┘
 ```
 
-`manis` spawns: `ssh -N -L 15210:10.0.125.35:1521 work` with
-`ServerAliveInterval=30` and `ExitOnForwardFailure=yes`. The process
-runs in its own session, so closing the GUI doesn't kill the tunnel.
+`manis` 启动的命令是：`ssh -N -L 15210:10.0.125.35:1521 work`，
+加上 `ServerAliveInterval=30` 和 `ExitOnForwardFailure=yes`。
+进程跑在独立的 session 里，关闭 GUI 不会杀掉隧道。
 
-### Why pywebview?
+### 为什么用 pywebview？
 
-- **Native window** — uses the system's WebKit (WKWebView on macOS),
-  WebView2 (Windows), or GTK WebKit (Linux). No Electron bloat.
-- **JS ↔ Python bridge** — `window.pywebview.api` lets the UI call
-  Python methods directly. No HTTP server needed.
-- **Tiny dependency footprint** — pure Python + system WebKit.
+- **原生窗口** — 用系统自带的 WebKit（macOS 的 WKWebView、Windows 的 WebView2、Linux 的 GTK WebKit）。不是 Electron 那种臃肿货。
+- **JS ↔ Python 桥接** — `window.pywebview.api` 让界面直接调用 Python 方法，无需 HTTP 服务。
+- **依赖体积极小** — 纯 Python + 系统 WebKit。
 
 ---
 
-## 🔌 Use cases
+## 🔌 典型用法
 
-### Access internal databases
+### 访问内网数据库
 
 ```
 Oracle:  localhost:15210  →  10.0.125.35:1521
@@ -217,116 +221,116 @@ MySQL:   localhost:13306  →  10.0.0.60:3306
 PG:      localhost:15432  →  10.0.0.60:5432
 ```
 
-### Internal web UIs
+### 内网 Web 控制台
 
 ```
 Jenkins: localhost:18080  →  10.0.126.66:8080
 Grafana:  localhost:13000  →  10.0.0.30:3000
 ```
 
-### RDP / SSH into internal hosts
+### RDP / SSH 进内网机器
 
 ```
 RDP:     localhost:13389  →  10.0.0.100:3389
 ```
 
-### SOCKS proxy
+### SOCKS 代理
 
-Set `tunnel_type: "dynamic"` to get a `ssh -D` SOCKS proxy on
-`localhost:1080`.
+把 `tunnel_type` 设为 `"dynamic"`，就在 `localhost:1080` 起一个 `ssh -D` SOCKS 代理。
 
 ---
 
-## 🛠️ Development
+## 🛠️ 开发
 
 ```bash
-# Install dev deps
+# 安装开发依赖
 uv sync
 
-# Run from source (auto-reload not supported)
+# 从源码运行（暂不支持热重载）
 uv run python3 -m manis
 
-# Build .app bundle
-uv run python3 setup.py py2app
+# 构建 .app 包（完整命令见上面"打包为 macOS .app"小节）
+UV_PYTHON=/usr/local/Cellar/python@3.13/3.13.11_1/bin/python3.13 \
+  uv run --python .venv/bin/python pyinstaller \
+    --noconfirm --windowed --name manis \
+    --add-data "manis/web:manis/web" main.py
 
-# Verify the bundle
+# 验证打包结果
 open dist/manis.app
 ```
 
-### Module overview
+### 模块概览
 
-| Module                  | Purpose                                            |
+| 模块                  | 作用                                          |
 |-------------------------|----------------------------------------------------|
-| `models.py`             | Dataclasses for tunnels, forwards, SSH hosts       |
-| `config_store.py`       | JSON persistence at `~/.manis/tunnels.json`        |
-| `ssh_config_parser.py`  | Parse `~/.ssh/config` Host entries                 |
-| `tunnel_manager.py`     | Spawn / stop / monitor SSH subprocesses            |
-| `app.py`                | pywebview window + `API` class exposed to JS       |
-| `web/index.html`        | Single-file UI (no build step)                     |
+| `models.py`             | 隧道、端口转发、SSH 主机 的 dataclass     |
+| `config_store.py`       | JSON 持久化（`~/.manis/tunnels.json`）     |
+| `ssh_config_parser.py`  | 解析 `~/.ssh/config` 里的 Host 条目         |
+| `tunnel_manager.py`     | SSH 子进程的启动/停止/监控                |
+| `app.py`                | pywebview 窗口 + 暴露给 JS 的 `API` 类     |
+| `web/index.html`        | 单文件界面（无需构建步骤）                  |
 
-### Adding a new field
+### 新增字段怎么加
 
-1. Add field to `TunnelConfig` dataclass in `models.py`
-2. Update `to_dict()` / `from_dict()` if needed
-3. Add `<input>` to the modal in `web/index.html`
-4. Pass through `API.save_tunnel()` in `app.py`
+1. 在 `models.py` 的 `TunnelConfig` dataclass 里加字段
+2. 必要时更新 `to_dict()` / `from_dict()`
+3. 在 `web/index.html` 的弹窗里加 `<input>`
+4. 在 `app.py` 的 `API.save_tunnel()` 里透传
 
 ---
 
-## 📋 Requirements
+## 📋 环境要求
 
 - Python 3.10+
-- macOS 11.0+ (for `.app` build)
+- macOS 11.0+（打包 .app 时需要）
 - `pywebview>=4.0`
-- `ssh` (pre-installed on macOS/Linux)
+- `ssh`（macOS/Linux 自带）
 
 ---
 
-## 🐛 Troubleshooting
+## 🐛 故障排查
 
-### "Pywebview fails to start"
+### "Pywebview 无法启动"
 
-Make sure you're running from a **GUI terminal session**, not over
-SSH without forwarding. On macOS, launch Terminal.app first.
+一定要在 **带 GUI 的终端会话** 里运行，不要在没有 X 转发的纯 SSH 会话里跑。
+macOS 上请先打开 Terminal.app。
 
 ### "Address already in use"
 
-Another tunnel (or a leftover SSH process) is using the local port.
+本端口被别的隧道（或残留 SSH 进程）占用了。
 
 ```bash
 lsof -i :15210
-# kill the PID, then: manis stop Oracle
+# 杀掉对应 PID，然后：manis stop Oracle
 ```
 
 ### "Connection refused"
 
-The jump host can't reach the target. Test manually:
+跳板机到不了目标地址。手动验证一下：
 
 ```bash
 ssh work "nc -zv 10.0.125.35 1521"
 ```
 
-### Tunnel dies when GUI closes
+### 关闭 GUI 后隧道跟着死了
 
-manis uses `start_new_session=True` and PID files — tunnels should
-survive GUI exit. If they don't, check `~/.manis/pids/` for stale
-PID files:
+manis 用 `start_new_session=True` 和 PID 文件来保证隧道存活——按理关闭 GUI 不应该杀掉隧道。
+如果发现隧道真的死了，去 `~/.manis/pids/` 看看有没有过期的 PID 文件：
 
 ```bash
 ls -la ~/.manis/pids/
-cat ~/.manis/pids/Oracle.pid    # check the PID
+cat ~/.manis/pids/Oracle.pid    # 看看 PID 是几
 ps -p $(cat ~/.manis/pids/Oracle.pid)
 ```
 
 ---
 
-## 📄 License
+## 📄 许可证
 
-MIT. See [LICENSE](LICENSE).
+MIT。详见 [LICENSE](LICENSE)。
 
-## 🙏 Credits
+## 🙏 致谢
 
-Inspired by [TypoStudio/ssh-tunnel-for-macos](https://github.com/TypoStudio/ssh-tunnel-for-macos)
-(macOS-only SwiftUI app, GPLv3). This project re-implements the core
-tunnel-management ideas in Python + pywebview so it works on any
-platform and architecture (including Intel Macs).
+灵感来自 [TypoStudio/ssh-tunnel-for-macos](https://github.com/TypoStudio/ssh-tunnel-for-macos)
+（macOS-only SwiftUI 应用，GPLv3）。本项目用 Python + pywebview 重新实现了核心的
+隧道管理思路，因此可以跑在任何平台、任何架构上（包括 Intel Mac）。
